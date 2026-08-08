@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "skills": {
+    "ai-agent-ui-support": {
+      "source": "drgarbage/ag-course-index",
+      "sourceType": "github",
+      "skillPath": "skills/ai-agent-ui-support/SKILL.md",
+      "computedHash": "c83d139b3d16c4d806dcbc3b93840906c4ae91a0189d18e9a7400dfc9b1475c3"
+    },
+    "frontend-design-direction": {
+      "source": "affaan-m/ECC",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-design-direction/SKILL.md",
+      "computedHash": "5e37a3a8e90de1da40881a2ed80de2a7246b46201cc325598c1b60fb3e8c4cfe"
+    },
+    "gemini-agent-dev-support": {
+      "source": "drgarbage/ag-course-index",
+      "sourceType": "github",
+      "skillPath": "skills/gemini-agent-dev-support/SKILL.md",
+      "computedHash": "9c8c52e6ad6deb4a927cfcc45a05d3e140ee3e9a726d8012e1d1b68c03641b63"
+    },
+    "live-dev-config": {
+      "source": "drgarbage/ag-course-index",
+      "sourceType": "github",
+      "skillPath": "skills/live-dev-config/SKILL.md",
+      "computedHash": "821a23e8501568a99a923c3b556331728ec7dbd027f10de65dfd7bc94523f139"
+    },
+    "live-dev-deploy": {
+      "source": "drgarbage/ag-course-index",
+      "sourceType": "github",
+      "skillPath": "skills/live-dev-deploy/SKILL.md",
+      "computedHash": "222e97909176cfc72a568011c23e4978d47bf3e60fa6db8bbd49d0d06fe78a5c"
+    },
+    "live-dev-init": {
+      "source": "drgarbage/ag-course-index",
+      "sourceType": "github",
+      "skillPath": "skills/live-dev-init/SKILL.md",
+      "computedHash": "19779884a507c68d42cc04dac6dbf2790318cef1ca565de3028a3c3ab5fd0655"
+    },
+    "live-dev-storage-init": {
+      "source": "drgarbage/ag-course-index",
+      "sourceType": "github",
+      "skillPath": "skills/live-dev-storage-init/SKILL.md",
+      "computedHash": "a46248d9cf37fd485cd1aea6da72e438cc11ddf56fb63451a1ca4bfa57ff3d67"
+    }
+  }
+}
