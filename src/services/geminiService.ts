@@ -4,12 +4,18 @@ import { generateMockProcurementData } from './mockSearchEngine';
 import { generateFullHtmlReport } from './htmlReportGenerator';
 import { ProcurementReport } from '../types/procurement';
 
-// 預設專用 API 閘道網址與金鑰
-export const DEFAULT_GEMINI_KEY = 'sk-xAupqea_ShDiJ6s6RbYhjA';
 export const DEFAULT_BASE_URL = 'https://gemini.printii.com';
 
-export function createGeminiClient(customApiKey?: string): GoogleGenAI {
-  const apiKey = customApiKey || getStoredApiKey() || DEFAULT_GEMINI_KEY;
+export function createGeminiClient(customApiKey?: string): GoogleGenAI | null {
+  const apiKey = (customApiKey || getStoredApiKey() || '').trim();
+  if (!apiKey) return null;
+
+  if (apiKey.startsWith('AIzaSy')) {
+    // Official Google Gemini API Key
+    return new GoogleGenAI({ apiKey });
+  }
+
+  // Custom Gateway or Course Proxy Key
   return new GoogleGenAI({
     apiKey,
     httpOptions: {
@@ -19,8 +25,10 @@ export function createGeminiClient(customApiKey?: string): GoogleGenAI {
 }
 
 export async function validateGeminiApiKey(apiKey: string): Promise<boolean> {
+  if (!apiKey || !apiKey.trim()) return false;
   try {
-    const ai = createGeminiClient(apiKey);
+    const ai = createGeminiClient(apiKey.trim());
+    if (!ai) return false;
     await ai.models.list();
     return true;
   } catch (error) {
@@ -80,10 +88,11 @@ export async function runProcurementAgentPipeline(
 
   let mockData = generateMockProcurementData(userInput);
 
-  // Call Gemini API via dedicated gateway https://gemini.printii.com
-  try {
-    const ai = createGeminiClient();
-    const prompt = `你是一位專業的企業採購顧問 Agent。用戶提出了採購需求：「${userInput}」。
+  // If valid Gemini API Client is available, call API to enhance title & strategy summary
+  const ai = createGeminiClient();
+  if (ai) {
+    try {
+      const prompt = `你是一位專業的企業採購顧問 Agent。用戶提出了採購需求：「${userInput}」。
 目前的 local time 為：${timeNow}。
 請根據用戶需求，提供一段簡短的採購專案標題與採購策略總結（繁體中文），格式請輸出為 JSON：
 {
@@ -91,23 +100,24 @@ export async function runProcurementAgentPipeline(
   "summaryNote": "採購策略與注意事項總結"
 }`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        systemInstruction: `Current local time: ${timeNow}. Reply strictly in JSON format.`,
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          systemInstruction: `Current local time: ${timeNow}. Reply strictly in JSON format.`,
+        }
+      });
+
+      const text = response.text || '';
+      const cleanJson = text.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(cleanJson);
+
+      if (parsed.title) {
+        mockData.strategy.summaryNote = parsed.summaryNote || mockData.strategy.summaryNote;
       }
-    });
-
-    const text = response.text || '';
-    const cleanJson = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(cleanJson);
-
-    if (parsed.title) {
-      mockData.strategy.summaryNote = parsed.summaryNote || mockData.strategy.summaryNote;
+    } catch (e) {
+      console.warn('Gemini API call optional enhancement failed, gracefully falling back to mock agent pipeline:', e);
     }
-  } catch (e) {
-    console.warn('Gemini API call via gemini.printii.com fallback to mock agent pipeline:', e);
   }
 
   const reportId = `report-${Date.now()}`;
@@ -166,9 +176,10 @@ export async function editReportPartialBlock(
 
   let updatedHtml = oldHtml;
 
-  try {
-    const ai = createGeminiClient();
-    const prompt = `你是一位 HTML 網頁修改專家 AI。用戶希望修改報告中的特定區塊 (Block ID: ${blockId})。
+  const ai = createGeminiClient();
+  if (ai) {
+    try {
+      const prompt = `你是一位 HTML 網頁修改專家 AI。用戶希望修改報告中的特定區塊 (Block ID: ${blockId})。
 修改需求為：「${instruction}」。
 以下是原報告的完整 HTML 原始碼：
 \`\`\`html
@@ -176,20 +187,21 @@ ${oldHtml}
 \`\`\`
 請僅對與區塊 ${blockId} 相關的 HTML 部分做精準修正，保留原有 CSS 樣式與腳本機制，並輸出完整的修復後 HTML 原始碼。`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-    });
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+      });
 
-    const text = response.text || '';
-    if (text.includes('<html') || text.includes('<!DOCTYPE')) {
-      updatedHtml = text.replace(/```html|```/g, '').trim();
+      const text = response.text || '';
+      if (text.includes('<html') || text.includes('<!DOCTYPE')) {
+        updatedHtml = text.replace(/```html|```/g, '').trim();
+      }
+    } catch (e) {
+      console.warn('Gemini block edit API error, using safe HTML patch fallback:', e);
     }
-  } catch (e) {
-    console.warn('Gemini block edit fallback:', e);
   }
 
-  // Fallback / standard enhancement if API call failed
+  // Fallback / standard enhancement if API call failed or no client
   if (updatedHtml === oldHtml) {
     const patchNote = `<div style="background:#e0f2fe; border:1px solid #7dd3fc; color:#0369a1; padding:10px; border-radius:6px; margin:10px 0; font-size:13px;">✏️ <strong>AI 局部修改註記 (區塊: ${blockId})：</strong> ${instruction}</div>`;
     if (updatedHtml.includes(`data-block-id="${blockId}"`)) {
